@@ -2,7 +2,7 @@ pub mod room {
     /// The connection initializer
     pub mod init {
         use std::{
-            io::{Read, Write},
+            io::{stdin, Read, Write},
             net::TcpListener,
         };
 
@@ -16,15 +16,22 @@ pub mod room {
 
                 loop {
                     let mut buffer = [0; 1024];
+
                     let bytes_read = stream.read(&mut buffer).unwrap();
                     let message = String::from_utf8_lossy(&buffer[..bytes_read]);
 
-                    if message.trim() == "exit" {
+                    if message.trim() == ":exit" {
                         println!("Client disconnected!");
                         break;
                     }
 
                     println!("Received message: {}", message.trim());
+
+                    let mut msg_buffer = String::new();
+                    println!("Message to send:");
+                    stdin().lock().read_to_string(&mut msg_buffer).unwrap();
+
+                    let _bytes_written = stream.write(&msg_buffer.as_bytes()).unwrap();
 
                     stream.write_all(message.as_bytes()).unwrap();
                 }
@@ -46,16 +53,18 @@ pub mod room {
             let stdin = io::stdin();
             loop {
                 let mut buffer = String::new();
+                println!("Message to send:");
                 stdin.lock().read_line(&mut buffer).unwrap();
 
-                stream.write_all(buffer.as_bytes()).unwrap();
+                let _bytes_written = stream.write(&buffer.as_bytes()).unwrap();
 
                 let mut response_buffer = [0; 1024];
                 let bytes_read = stream.read(&mut response_buffer).unwrap();
                 let response = String::from_utf8_lossy(&response_buffer[..bytes_read]);
+
                 println!("Received response: {}", response.trim());
 
-                if buffer.trim() == "exit" {
+                if buffer.trim() == ":exit" {
                     break;
                 }
             }
