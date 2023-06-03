@@ -1,63 +1,64 @@
 pub mod room {
     /// The connection initializer
     pub mod init {
-        use std::io::Read;
-        use std::net::{SocketAddr, TcpListener, TcpStream};
-        use std::str::{from_utf8, FromStr};
+        use std::{
+            io::{Read, Write},
+            net::TcpListener,
+        };
 
         pub fn run() {
-            println!("Initializer works");
-            establish_connection();
-        }
+            let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+            println!("Server listening on port 8080...");
 
-        fn establish_connection() {
-            let addr: SocketAddr = SocketAddr::from_str("127.0.0.1:8080").unwrap();
-            let incomming_stream: TcpListener = TcpListener::bind(addr).unwrap();
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                println!("New client connected!");
 
-            for in_stream in incomming_stream.incoming() {
-                let mut in_stream = in_stream.unwrap();
+                loop {
+                    let mut buffer = [0; 1024];
+                    let bytes_read = stream.read(&mut buffer).unwrap();
+                    let message = String::from_utf8_lossy(&buffer[..bytes_read]);
 
-                handle_connection(&mut in_stream);
+                    if message.trim() == "exit" {
+                        println!("Client disconnected!");
+                        break;
+                    }
+
+                    println!("Received message: {}", message.trim());
+
+                    stream.write_all(message.as_bytes()).unwrap();
+                }
             }
-        }
-
-        #[allow(unused_variables)]
-        fn handle_connection(stream: &mut TcpStream) {
-            // read from the reciever
-            let mut buffer = [0; 512];
-            let written_till = stream.read(&mut buffer).unwrap();
-
-            // what the reciever gave
-            println!(
-                "recieved: {:?}",
-                from_utf8(&buffer[..written_till]).unwrap()
-            );
         }
     }
 
     /// The reciever of the connection
     pub mod reciever {
         use std::{
-            io::Write,
-            net::{SocketAddr, TcpStream},
-            str::FromStr,
+            io::{self, BufRead, Read, Write},
+            net::TcpStream,
         };
 
         pub fn run() {
-            println!("Reciever works");
-            establish_connection();
-        }
+            let mut stream = TcpStream::connect("127.0.0.1:8080").unwrap();
+            println!("Connected to server!");
 
-        fn establish_connection() {
-            let addr: SocketAddr = SocketAddr::from_str("127.0.0.1:8080").unwrap();
-            let mut stream: TcpStream = TcpStream::connect(addr).unwrap();
+            let stdin = io::stdin();
+            loop {
+                let mut buffer = String::new();
+                stdin.lock().read_line(&mut buffer).unwrap();
 
-            handle_connection(&mut stream);
-        }
+                stream.write_all(buffer.as_bytes()).unwrap();
 
-        #[allow(unused_variables)]
-        fn handle_connection(stream: &mut TcpStream) {
-            stream.write(b"hello from the other side").unwrap();
+                let mut response_buffer = [0; 1024];
+                let bytes_read = stream.read(&mut response_buffer).unwrap();
+                let response = String::from_utf8_lossy(&response_buffer[..bytes_read]);
+                println!("Received response: {}", response.trim());
+
+                if buffer.trim() == "exit" {
+                    break;
+                }
+            }
         }
     }
 }
