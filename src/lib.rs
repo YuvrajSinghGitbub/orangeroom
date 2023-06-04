@@ -2,7 +2,7 @@ pub mod room {
     /// The connection initializer
     pub mod init {
         use std::{
-            io::{stdin, Read, Write},
+            io::{Read, Write},
             net::TcpListener,
         };
 
@@ -26,13 +26,6 @@ pub mod room {
                     }
 
                     println!("Received message: {}", message.trim());
-
-                    let mut msg_buffer = String::new();
-                    println!("Message to send:");
-                    stdin().lock().read_to_string(&mut msg_buffer).unwrap();
-
-                    let _bytes_written = stream.write(&msg_buffer.as_bytes()).unwrap();
-
                     stream.write_all(message.as_bytes()).unwrap();
                 }
             }
